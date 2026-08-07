@@ -1,0 +1,10 @@
+{
+  "name": "GBME 365",
+  "short_name": "GBME365",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#111827",
+  "description": "Daily Global Brand Marketing English"
+}
