@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <title>GBME 365</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --text:#171923; --muted:#6b7280;
+      --line:#e5e7eb; --accent:#111827; --soft:#eef2ff; --good:#047857;
+      --shadow:0 10px 30px rgba(17,24,39,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;background:var(--bg);color:var(--text)}
+    .app{max-width:760px;margin:0 auto;padding:22px 16px 96px}
+    header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+    .brand h1{font-size:28px;margin:0;letter-spacing:-.8px}
+    .brand p{margin:4px 0 0;color:var(--muted);font-size:14px}
+    .pill{background:#111827;color:white;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700}
+    .hero{background:linear-gradient(135deg,#111827,#374151);color:white;border-radius:24px;padding:24px;box-shadow:var(--shadow);margin-bottom:18px}
+    .hero small{opacity:.75}
+    .hero h2{font-size:26px;line-height:1.3;margin:10px 0 8px}
+    .hero p{margin:0;opacity:.82;line-height:1.55}
+    .progress{margin-top:18px;background:rgba(255,255,255,.16);height:8px;border-radius:999px;overflow:hidden}
+    .progress > div{height:100%;background:white;width:1%}
+    .section-title{display:flex;justify-content:space-between;align-items:center;margin:24px 2px 10px}
+    .section-title h3{margin:0;font-size:18px}
+    .section-title span{font-size:12px;color:var(--muted)}
+    .grid{display:grid;gap:12px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 4px 16px rgba(17,24,39,.03)}
+    .label{font-size:12px;font-weight:800;color:#4f46e5;text-transform:uppercase;letter-spacing:.6px}
+    .sentence{font-size:20px;font-weight:800;line-height:1.4;margin:8px 0}
+    .meaning{color:var(--muted);line-height:1.55}
+    .actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+    button{border:none;border-radius:12px;padding:10px 13px;font-weight:700;cursor:pointer;background:#f3f4f6;color:#111827}
+    button.primary{background:#111827;color:white}
+    button.starred{background:#fff7ed;color:#b45309}
+    .word-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start}
+    .word{font-size:18px;font-weight:800}
+    .desc{font-size:14px;color:var(--muted);margin-top:4px}
+    .example{font-size:14px;margin-top:10px;padding:10px 12px;background:#f9fafb;border-radius:12px}
+    .tabs{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(92%,720px);background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:18px;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);z-index:5}
+    .tab{padding:10px 6px;text-align:center;font-size:12px;border-radius:12px;color:var(--muted);cursor:pointer}
+    .tab.active{background:#111827;color:white;font-weight:800}
+    .page{display:none}.page.active{display:block}
+    input, textarea, select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:white;font:inherit}
+    textarea{min-height:90px;resize:vertical}
+    .form{display:grid;gap:10px}
+    .search{margin:4px 0 14px}
+    .empty{color:var(--muted);text-align:center;padding:28px 8px}
+    .tag{display:inline-block;font-size:11px;padding:5px 8px;background:#f3f4f6;border-radius:999px;color:#4b5563;margin-right:4px}
+    .done{border-color:#a7f3d0;background:#ecfdf5}
+    .done .label{color:var(--good)}
+    @media (min-width:700px){
+      .two{grid-template-columns:1fr 1fr}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>GBME 365</h1>
+      <p>Global Brand Marketing English · Daily Archive</p>
+    </div>
+    <div class="pill" id="dayPill">Day 1</div>
+  </header>
+
+  <section id="home" class="page active">
+    <div class="hero">
+      <small>TODAY'S FOCUS</small>
+      <h2>회의에서 바로 쓰는<br>브랜드 마케팅 영어</h2>
+      <p>하루 10–15분. 문장 2개 + 단어 5개 + 복습 1회.</p>
+      <div class="progress"><div id="progressBar"></div></div>
+    </div>
+
+    <div class="section-title"><h3>오늘의 필수 문장</h3><span>말로 5번 읽기</span></div>
+    <div class="grid" id="todaySentences"></div>
+
+    <div class="section-title"><h3>오늘의 단어</h3><span>5 words</span></div>
+    <div class="grid two" id="todayWords"></div>
+  </section>
+
+  <section id="library" class="page">
+    <div class="section-title"><h3>Sentence Library</h3><span>누적 아카이브</span></div>
+    <input class="search" id="searchInput" placeholder="문장, 뜻, 태그 검색" />
+    <div class="grid" id="libraryList"></div>
+  </section>
+
+  <section id="review" class="page">
+    <div class="section-title"><h3>Review</h3><span>즐겨찾기 & 미완료</span></div>
+    <div class="grid" id="reviewList"></div>
+  </section>
+
+  <section id="add" class="page">
+    <div class="section-title"><h3>직접 추가</h3><span>업무에서 나온 표현 저장</span></div>
+    <div class="card">
+      <div class="form">
+        <input id="newSentence" placeholder="영어 문장" />
+        <textarea id="newMeaning" placeholder="뜻 / 사용 맥락"></textarea>
+        <input id="newTags" placeholder="태그 예: meeting, ppt, toxin" />
+        <button class="primary" id="addBtn">문장 저장</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<nav class="tabs">
+  <div class="tab active" data-page="home">Today</div>
+  <div class="tab" data-page="library">Library</div>
+  <div class="tab" data-page="review">Review</div>
+  <div class="tab" data-page="add">Add</div>
+</nav>
+
+<script>
+const starter = {
+  words: [
+    {word:"adoption", meaning:"채택, 사용 확대", example:"Treatment adoption remains low."},
+    {word:"perceive", meaning:"~라고 인식하다", example:"Patients may perceive the cost to be high."},
+    {word:"alternative", meaning:"대안, 대체 선택지", example:"There are many alternative treatments."},
+    {word:"relative to", meaning:"~에 비해", example:"The price is high relative to the expected benefit."},
+    {word:"remain", meaning:"여전히 ~이다", example:"Interest remains high."}
+  ],
+  sentences: [
+    {
+      id:"s1",
+      text:"We believe adoption remains relatively low because there are many alternative treatments available.",
+      meaning:"다양한 대체 치료법이 있기 때문에 실제 채택률은 아직 낮다고 생각합니다.",
+      tags:["meeting","marketing","adoption"],
+      starred:true, done:false, day:1
+    },
+    {
+      id:"s2",
+      text:"Patients may perceive the treatment cost to be high relative to its expected benefits.",
+      meaning:"환자들은 기대 효과에 비해 치료 비용이 높다고 인식할 수 있습니다.",
+      tags:["meeting","value","patient"],
+      starred:true, done:false, day:1
+    },
+    {
+      id:"s3",
+      text:"We believe this is the right approach.",
+      meaning:"저희는 이것이 적절한 접근이라고 생각합니다.",
+      tags:["meeting","opinion"],
+      starred:false, done:false, day:1
+    },
+    {
+      id:"s4",
+      text:"We believe the market has significant potential.",
+      meaning:"저희는 이 시장에 상당한 잠재력이 있다고 봅니다.",
+      tags:["presentation","market"],
+      starred:false, done:false, day:1
+    }
+  ]
+};
+
+let data = JSON.parse(localStorage.getItem("gbme365-data") || "null") || starter;
+
+function save(){ localStorage.setItem("gbme365-data", JSON.stringify(data)); }
+
+function sentenceCard(s){
+  return `
+  <div class="card ${s.done ? 'done':''}">
+    <div class="label">${s.done ? 'Completed' : 'Must Know'}</div>
+    <div class="sentence">${s.text}</div>
+    <div class="meaning">${s.meaning}</div>
+    <div style="margin-top:10px">${(s.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join("")}</div>
+    <div class="actions">
+      <button onclick="toggleDone('${s.id}')" class="${s.done?'primary':''}">${s.done?'✓ 외움':'외웠어요'}</button>
+      <button onclick="toggleStar('${s.id}')" class="${s.starred?'starred':''}">${s.starred?'★ 저장됨':'☆ 즐겨찾기'}</button>
+      <button onclick="speakText(${JSON.stringify(s.text)})">🔊 듣기</button>
+    </div>
+  </div>`;
+}
+
+function render(){
+  document.getElementById("todaySentences").innerHTML = data.sentences.filter(s=>s.day===1).slice(0,2).map(sentenceCard).join("");
+  document.getElementById("todayWords").innerHTML = data.words.map(w=>`
+    <div class="card">
+      <div class="word-row">
+        <div><div class="word">${w.word}</div><div class="desc">${w.meaning}</div></div>
+        <button onclick="speakText(${JSON.stringify(w.word)})">🔊</button>
+      </div>
+      <div class="example">${w.example}</div>
+    </div>`).join("");
+  renderLibrary();
+  renderReview();
+  const done = data.sentences.filter(s=>s.done).length;
+  const pct = Math.max(1, Math.round(done / Math.max(1,data.sentences.length) * 100));
+  document.getElementById("progressBar").style.width = pct+"%";
+}
+
+function renderLibrary(){
+  const q=(document.getElementById("searchInput")?.value||"").toLowerCase();
+  const filtered=data.sentences.filter(s =>
+    (s.text+" "+s.meaning+" "+(s.tags||[]).join(" ")).toLowerCase().includes(q)
+  );
+  document.getElementById("libraryList").innerHTML = filtered.length ? filtered.map(sentenceCard).join("") : '<div class="empty">검색 결과가 없어요.</div>';
+}
+
+function renderReview(){
+  const list=data.sentences.filter(s=>s.starred || !s.done);
+  document.getElementById("reviewList").innerHTML = list.length ? list.map(sentenceCard).join("") : '<div class="empty">오늘 복습할 문장이 없어요 🎉</div>';
+}
+
+window.toggleDone=function(id){
+  const s=data.sentences.find(x=>x.id===id); if(s){s.done=!s.done; save(); render();}
+}
+window.toggleStar=function(id){
+  const s=data.sentences.find(x=>x.id===id); if(s){s.starred=!s.starred; save(); render();}
+}
+window.speakText=function(text){
+  if(!('speechSynthesis' in window)) return alert("이 브라우저에서는 음성 읽기를 지원하지 않아요.");
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang="en-US"; u.rate=.88;
+  speechSynthesis.speak(u);
+}
+
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(tab.dataset.page).classList.add("active");
+  });
+});
+document.getElementById("searchInput").addEventListener("input", renderLibrary);
+document.getElementById("addBtn").addEventListener("click",()=>{
+  const text=document.getElementById("newSentence").value.trim();
+  const meaning=document.getElementById("newMeaning").value.trim();
+  const tags=document.getElementById("newTags").value.split(",").map(x=>x.trim()).filter(Boolean);
+  if(!text) return alert("영어 문장을 입력해 주세요.");
+  data.sentences.unshift({
+    id:"u"+Date.now(), text, meaning, tags, starred:true, done:false, day:0
+  });
+  save(); render();
+  document.getElementById("newSentence").value="";
+  document.getElementById("newMeaning").value="";
+  document.getElementById("newTags").value="";
+  document.querySelector('[data-page="library"]').click();
+});
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));
+}
+render();
+</script>
+</body>
+</html>
