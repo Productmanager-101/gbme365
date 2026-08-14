@@ -1,4 +1,6 @@
 const KEY = "gbme365-auto-v4";
+const START_DATE = "2026-08-14";
+const DAY_RESET_VERSION = 1;
 const $ = (selector) => document.querySelector(selector);
 const stored = JSON.parse(localStorage.getItem(KEY) || "{}");
 const state = {
@@ -6,17 +8,23 @@ const state = {
   done: stored.done || {},
   starred: stored.starred || {},
   wordStarred: stored.wordStarred || {},
-  startedOn: stored.startedOn || new Date().toISOString().slice(0, 10)
+  startedOn: START_DATE,
+  dayResetVersion: DAY_RESET_VERSION
 };
 let page = "today";
 let manualDay = null;
 let celebratedDay = null;
 
 function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
-function dateISO() { return new Date().toISOString().slice(0, 10); }
+function dateISO(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 function maxDay() { return Math.max(...GBME_CONTENT.days.map((d) => d.day)); }
 function dayFromDate() {
-  const start = new Date(`${state.startedOn}T00:00:00`);
+  const start = new Date(`${START_DATE}T00:00:00`);
   const now = new Date(`${dateISO()}T00:00:00`);
   return Math.max(1, Math.min(maxDay(), Math.floor((now - start) / 86400000) + 1));
 }
@@ -48,12 +56,10 @@ function speak(text) {
   speechSynthesis.speak(utterance);
 }
 
-function catIllustration(review = false, mood = "ready") {
-  return `<div class="cat ${review ? "scholar" : ""} ${mood}" aria-label="${review ? "안경 쓴 복습 고양이" : "학습 고양이"}">
-    <div class="cat-tail"></div><div class="cat-body"></div><div class="cat-head"><i class="ear left"></i><i class="ear right"></i>
-    <span class="eye left"></span><span class="eye right"></span><span class="nose"></span><span class="mouth"></span>
-    ${review ? '<span class="glasses left"></span><span class="glasses right"></span><span class="bridge"></span>' : ""}</div>
-    <span class="paw left"></span><span class="paw right"></span></div>`;
+function catIllustration(review = false, mood = "ready", variant = "") {
+  const asset = variant === "sitting" ? "cat-sitting.png" : mood === "happy" ? "cat-complete.png" : review ? "cat-review.png" : "cat-studying.png";
+  const label = variant === "sitting" ? "앉아서 인사하는 샴고양이" : mood === "happy" ? "두 팔을 들고 기뻐하는 샴고양이" : review ? "책상 아래에서 얼굴을 내민 복습 샴고양이" : "책상에서 공부하는 샴고양이";
+  return `<div class="cat ${review ? "scholar" : ""} ${mood}" role="img" aria-label="${label}"><img src="assets/${asset}" alt="" draggable="false"></div>`;
 }
 function catMessage(done, review) {
   if (done === 2) return review ? "복습 완료! 기억력이 반짝반짝해요 ✨" : "오늘 공부 끝! 정말 멋진 집중력이에요 ✨";
@@ -80,6 +86,13 @@ function wordCard(w) {
     <div class="word-meaning">${esc(w.meaning)}</div><div class="example">${esc(w.example)}</div>
     <button class="text-btn" onclick='speak(${JSON.stringify(`${w.word}. ${w.example}`)})'>◖ 단어와 예문 듣기</button></article>`;
 }
+function dialogueSection(d) {
+  const text = d.dialogue.map((line) => `${line.speaker}: ${line.text}`).join(". ");
+  return `<section class="section"><div class="section-head"><div><span class="section-kicker">MINI DIALOGUE</span><h3>업무 대화로 익히기</h3></div><button class="btn sound compact" onclick='speak(${JSON.stringify(text)})'>◖ 전체 듣기</button></div><div class="card dialogue-card">${d.dialogue.map((line) => `<div class="dialogue-line"><b>${esc(line.speaker)}</b><p>${esc(line.text)}</p></div>`).join("")}</div></section>`;
+}
+function speakingSection(d) {
+  return `<section class="section"><div class="section-head"><div><span class="section-kicker">${d.type === "review" ? "SPEAKING CHALLENGE" : "SPEAKING MISSION"}</span><h3>Your Turn</h3></div></div><div class="card speaking-card"><span class="situation-label">상황</span><p class="speaking-prompt">${esc(d.speaking.prompt)}</p><button class="btn reveal" onclick="this.closest('.speaking-card').classList.add('revealed')">정답 보기</button><div class="model-answer" aria-live="polite"><span>MODEL ANSWER</span><p>${esc(d.speaking.answer)}</p><button class="btn sound" onclick='speak(${JSON.stringify(d.speaking.answer)})'>◖ 모범 답변 듣기</button></div></div></section>`;
+}
 function dayNavigation() {
   return `<div class="day-nav"><button onclick="moveDay(-1)" ${currentDay() === 1 ? "disabled" : ""}>‹ 이전 Day</button><button class="today-button" onclick="goToday()">Today · Day ${dayFromDate()}</button><button onclick="moveDay(1)" ${currentDay() === maxDay() ? "disabled" : ""}>다음 Day ›</button></div>`;
 }
@@ -97,8 +110,8 @@ function todayPage() {
     <div class="cat-zone">${catIllustration(review, done === 2 ? "happy" : "ready")}<div class="speech">${catMessage(done, review)}</div></div>
     ${celebrate ? '<div class="confetti" aria-hidden="true"><i>✦</i><i>●</i><i>★</i><i>✦</i><i>●</i></div>' : ""}
   </section>
-  <section class="section"><div class="section-head"><div><span class="section-kicker">SENTENCES</span><h3>필수 문장 2개</h3></div><span class="count">${done}/2</span></div><div class="grid">${d.sentences.map((s) => sentenceCard({ ...s, day: d.day })).join("")}</div></section>
-  <section class="section"><div class="section-head"><div><span class="section-kicker">VOCABULARY</span><h3>${review ? "복습 단어 5개" : "오늘의 단어 5개"}</h3></div><span class="count">5 words</span></div><div class="word-grid">${d.words.map((w) => wordCard({ ...w, day: d.day })).join("")}</div></section>`;
+  <section class="section"><div class="section-head"><div><span class="section-kicker">KEY SENTENCES</span><h3>핵심 문장 2개</h3></div><span class="count">${done}/2</span></div><div class="grid">${d.sentences.map((s) => sentenceCard({ ...s, day: d.day })).join("")}</div></section>
+  <section class="section"><div class="section-head"><div><span class="section-kicker">VOCABULARY</span><h3>${review ? "복습 단어 5개" : "오늘의 단어 5개"}</h3></div><span class="count">5 words</span></div><div class="word-grid">${d.words.map((w) => wordCard({ ...w, day: d.day })).join("")}</div></section>${dialogueSection(d)}${speakingSection(d)}`;
 }
 function libraryPage() {
   return `<div class="page-title"><span class="section-kicker">CONTINUOUS JOURNEY</span><h2>전체 학습</h2><p>자동 생성된 최신 Day까지 언제든 다시 학습해 보세요.</p></div><div class="day-grid">${GBME_CONTENT.days.map((d) => `<button class="${d.type === "review" ? "review" : ""}" onclick="jumpDay(${d.day})"><span>${d.type === "review" ? "REVIEW" : "DAY"}</span><b>${d.day}</b>${isDayComplete(d) ? "<i>✓</i>" : ""}</button>`).join("")}</div>`;
@@ -113,7 +126,7 @@ function favoritesPage() {
 function empty(message) { return `<div class="empty"><span>♡</span><p>${message}</p></div>`; }
 function infoPage() {
   const completed = GBME_CONTENT.days.filter(isDayComplete).length;
-  return `<div class="page-title"><span class="section-kicker">YOUR PROGRESS</span><h2>학습 안내</h2><p>Day 30 이후에도 매일 새로운 글로벌 비즈니스 영어가 이어져요.</p></div><div class="summary card"><div>${catIllustration(false, "happy")}<span><b>${completed}</b><small>완료한 Day</small></span></div><div><b>${Object.values(state.starred).filter(Boolean).length + Object.values(state.wordStarred).filter(Boolean).length}</b><small>즐겨찾기</small></div></div><div class="card info-card"><h3>학습 리듬</h3><p>매일 필수 문장 2개와 단어 5개를 학습합니다. 매 5일째에는 직전 표현을 새로운 문맥에서 다시 만나는 복습 Day가 열려요.</p><h3>자동 콘텐츠</h3><p>새 콘텐츠는 매일 자동으로 추가됩니다. 업데이트에 실패하면 마지막으로 받은 콘텐츠를 계속 표시하므로 학습 화면이 깨지지 않아요.</p><h3>기록 저장</h3><p>완료와 즐겨찾기는 이 기기의 브라우저에 안전하게 저장됩니다. 앱을 홈 화면에 추가하면 PWA로도 편하게 사용할 수 있어요.</p></div>`;
+  return `<div class="page-title"><span class="section-kicker">YOUR PROGRESS</span><h2>학습 안내</h2><p>매일 이해하고, 문맥에서 익히고, 직접 말하는 Global Business English.</p></div><div class="summary card"><div>${catIllustration(false, "ready", "sitting")}<span><b>${completed}</b><small>완료한 Day</small></span></div><div><b>${Object.values(state.starred).filter(Boolean).length + Object.values(state.wordStarred).filter(Boolean).length}</b><small>즐겨찾기</small></div></div><div class="card info-card"><h3>학습 리듬</h3><p>매일 핵심 문장 2개와 단어 5개를 익힌 뒤 짧은 대화와 Speaking Mission으로 직접 사용합니다. 매 5일째는 직전 4일의 표현을 복습하는 날이에요.</p><h3>Day 기준</h3><p>2026년 8월 14일이 새로운 Day 1입니다. 날짜가 바뀌면 Today의 Day도 자동으로 하루씩 올라갑니다.</p><h3>기록 저장</h3><p>완료와 즐겨찾기는 이 기기의 브라우저에 안전하게 저장됩니다. 앱을 홈 화면에 추가하면 PWA로도 편하게 사용할 수 있어요.</p></div>`;
 }
 function go(next) { page = next; render(); scrollTo({ top: 0, behavior: "smooth" }); }
 function tabs() {
@@ -121,7 +134,7 @@ function tabs() {
 }
 function render() {
   const views = { today: todayPage, library: libraryPage, favorites: favoritesPage, info: infoPage };
-  $("#app").innerHTML = `<main class="app"><header class="top"><button class="brand" onclick="go('today')"><span class="brand-mark">M</span><span><b>Meowlish</b><small>Business English, one paw at a time</small></span></button><span class="day-pill">DAY ${currentDay()} <i>/ ${maxDay()}</i></span></header>${views[page]()}</main>${tabs()}`;
+  $("#app").innerHTML = `<main class="app"><header class="top"><button class="brand" onclick="go('today')"><img class="brand-mark" src="favicon-32.png" alt=""><span><b>ENGLISH MASTER</b><small>Global Business English, one paw at a time</small></span></button><span class="day-pill">DAY ${currentDay()} <i>/ ${maxDay()}</i></span></header>${views[page]()}</main>${tabs()}`;
   save();
 }
 
@@ -138,7 +151,7 @@ async function loadGeneratedContent() {
 }
 function mergeGeneratedDays(days) {
   const known = new Set(GBME_CONTENT.days.map((d) => d.day));
-  days.filter((d) => d.day > 30 && !known.has(d.day) && d.sentences?.length === 2 && d.words?.length === 5).forEach((d) => GBME_CONTENT.days.push(d));
+  days.filter((d) => d.day > 30 && !known.has(d.day) && d.sentences?.length === 2 && d.words?.length === 5).forEach((d) => GBME_CONTENT.days.push(enrichDay(d)));
   GBME_CONTENT.days.sort((a, b) => a.day - b.day);
 }
 if ("speechSynthesis" in window) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); }
