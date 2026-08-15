@@ -2,12 +2,13 @@
   "use strict";
   const firebaseConfig = { apiKey: "AIzaSyBNuuspyit1PxaxhcqwjrQIiubxkibLEYA", authDomain: "english-master-942ca.firebaseapp.com", projectId: "english-master-942ca", storageBucket: "english-master-942ca.firebasestorage.app", messagingSenderId: "938731012885", appId: "1:938731012885:web:45023fdb49f3a86ddddf1c" };
   const vapidKey = "BOfs6ffrroEtRi-7SKM4KRq54fWTNxmOQGxPmY1g4rFex5r4zqL4qzNAY2Xpw2a8RmFPig8y1SjeuOvxxALp1Oo";
-  let auth, db, messaging, user, corePromise, messagingPromise, busy = false, notice = "";
+  let auth, db, messaging, user, corePromise, messagingPromise, busy = false, notice = "", tokenRegistered = false;
   const isIos = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const hasNotificationApi = () => typeof Notification !== "undefined" && typeof Notification.requestPermission === "function";
   const hasPushFoundation = () => window.isSecureContext && "serviceWorker" in navigator && "PushManager" in window && hasNotificationApi();
   const permission = () => hasNotificationApi() ? Notification.permission : "unsupported";
+  const errorMessage = (error) => error instanceof Error || error?.message ? String(error.message) : String(error);
   const tokenId = async (token) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token)))).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 
   function renderControls(message) {
@@ -16,9 +17,9 @@
     if (!button || !help) return;
     const granted = permission() === "granted";
     button.hidden = false;
-    button.disabled = busy || granted;
-    button.classList.toggle("enabled", granted);
-    button.textContent = granted ? "🔔 알림 켜짐" : "🔔 알림 받기";
+    button.disabled = busy || (granted && tokenRegistered);
+    button.classList.toggle("enabled", granted && tokenRegistered);
+    button.textContent = busy ? "🔔 기기 등록 중" : granted && tokenRegistered ? "🔔 알림 켜짐" : granted ? "🔄 기기 등록 다시 시도" : "🔔 알림 받기";
     button.onclick = enableNotifications;
     const installHelp = isIos() && !isStandalone() ? "홈 화면에 추가한 후 설치된 English Master에서 알림을 켜주세요." : "";
     const unsupportedHelp = !isIos() && !hasPushFoundation() ? "이 브라우저에서는 Web Push 알림을 지원하지 않아요." : "";
@@ -67,12 +68,20 @@
     await ensureCore();
     await db.doc(`users/${user.uid}/tokens/${await tokenId(token)}`).set({ token, platform: isIos() ? "ios" : "web", userAgent: navigator.userAgent.slice(0, 300), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
   }
+  async function getMessagingRegistration() {
+    const requested = await navigator.serviceWorker.register("service-worker.js", { scope: "./" });
+    const registration = requested.active ? requested : await navigator.serviceWorker.ready;
+    if (!registration.active) throw new Error("English Master service worker is not active");
+    return registration;
+  }
   async function registerToken(forceIosStandalone = false) {
     const fcm = await ensureMessaging(forceIosStandalone);
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await getMessagingRegistration();
     const token = await fcm.getToken({ vapidKey, serviceWorkerRegistration: registration });
     if (!token) throw new Error("FCM registration token was not issued");
     await saveToken(token);
+    tokenRegistered = true;
+    return token;
   }
   async function enableNotifications() {
     if (busy) return;
@@ -88,18 +97,24 @@
       renderControls("매일 학습 시간에 알림을 보내드릴게요.");
     } catch (error) {
       console.error("Notification registration failed", error);
-      renderControls("알림 권한은 확인했지만 기기 등록에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      tokenRegistered = false;
+      renderControls(`기기 등록 오류: ${errorMessage(error)}`);
     } finally { busy = false; renderControls(); }
   }
   async function initialize() {
     renderControls();
     try {
       await ensureCore();
-      if (permission() === "granted" && (!isIos() || isStandalone())) await registerToken(isIos() && isStandalone());
+      if (permission() === "granted" && (!isIos() || isStandalone())) {
+        busy = true; renderControls("알림 권한을 확인했어요. 기기를 자동 등록하는 중이에요.");
+        try { await registerToken(isIos() && isStandalone()); notice = ""; }
+        catch (error) { tokenRegistered = false; renderControls(`기기 등록 오류: ${errorMessage(error)}`); throw error; }
+        finally { busy = false; renderControls(); }
+      }
       return true;
     } catch (error) {
       console.error("Firebase initialization failed", error);
-      if (permission() === "granted") renderControls("알림은 허용되어 있지만 기기 등록을 완료하지 못했어요.");
+      if (permission() === "granted" && !notice) renderControls(`기기 등록 오류: ${errorMessage(error)}`);
       return false;
     }
   }
