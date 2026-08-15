@@ -22,11 +22,17 @@ function dateISO(date = new Date()) {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+function kstDateISO(date = new Date()) { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(date); }
 function maxDay() { return Math.max(...GBME_CONTENT.days.map((d) => d.day)); }
 function dayFromDate() {
   const start = new Date(`${START_DATE}T00:00:00`);
   const now = new Date(`${dateISO()}T00:00:00`);
   return Math.max(1, Math.min(maxDay(), Math.floor((now - start) / 86400000) + 1));
+}
+function dayFromKstDate() {
+  const start = new Date(`${START_DATE}T00:00:00Z`);
+  const today = new Date(`${kstDateISO()}T00:00:00Z`);
+  return Math.max(1, Math.min(maxDay(), Math.floor((today - start) / 86400000) + 1));
 }
 function currentDay() { return manualDay || dayFromDate(); }
 function getDay(number) { return GBME_CONTENT.days.find((item) => item.day === number); }
@@ -41,6 +47,7 @@ function toggleDone(id, dayNumber) {
   const d = getDay(dayNumber);
   if (state.done[id] && isDayComplete(d)) celebratedDay = dayNumber;
   save();
+  if (dayNumber === dayFromKstDate()) window.EnglishMasterPush?.syncCompletion(kstDateISO(), isDayComplete(d));
   render();
 }
 function toggleStar(id) { state.starred[id] = !state.starred[id]; save(); render(); }
@@ -134,8 +141,9 @@ function tabs() {
 }
 function render() {
   const views = { today: todayPage, library: libraryPage, favorites: favoritesPage, info: infoPage };
-  $("#app").innerHTML = `<main class="app"><header class="top"><button class="brand" onclick="go('today')"><img class="brand-mark" src="favicon-32.png" alt=""><span><b>ENGLISH MASTER</b><small>Global Business English, one paw at a time</small></span></button><span class="day-pill">DAY ${currentDay()} <i>/ ${maxDay()}</i></span></header>${views[page]()}</main>${tabs()}`;
+  $("#app").innerHTML = `<main class="app"><header class="top"><button class="brand" onclick="go('today')"><img class="brand-mark" src="favicon-32.png" alt=""><span><b>ENGLISH MASTER</b><small>Global Business English, one paw at a time</small></span></button><div class="header-actions"><button id="notification-toggle" class="notification-toggle" type="button" hidden></button><span class="day-pill">DAY ${currentDay()} <i>/ ${maxDay()}</i></span></div></header><div id="notification-help" class="notification-help" role="status" hidden></div>${views[page]()}</main>${tabs()}`;
   save();
+  window.EnglishMasterPush?.renderControls();
 }
 
 async function loadGeneratedContent() {
@@ -156,4 +164,10 @@ function mergeGeneratedDays(days) {
 }
 if ("speechSynthesis" in window) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); }
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js").catch(() => {}));
-loadGeneratedContent().finally(render);
+loadGeneratedContent().finally(() => {
+  render();
+  window.EnglishMasterPush?.initialize().then(() => {
+    const today = getDay(dayFromKstDate());
+    window.EnglishMasterPush?.syncCompletion(kstDateISO(), isDayComplete(today));
+  });
+});

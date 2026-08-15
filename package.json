@@ -1,0 +1,7 @@
+{
+  "name": "english-master-push-jobs",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test" },
+  "dependencies": { "firebase-admin": "^13.4.0" }
+}

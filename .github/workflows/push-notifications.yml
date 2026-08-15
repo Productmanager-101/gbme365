@@ -1,0 +1,40 @@
+name: Send learning push notifications
+
+on:
+  schedule:
+    - cron: "0 23 * * *" # 08:00 Asia/Seoul (next calendar day)
+    - cron: "0 13 * * *" # 22:00 Asia/Seoul
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Notification audience
+        required: true
+        default: morning
+        type: choice
+        options: [morning, evening]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: learning-push-${{ github.event.schedule || inputs.mode || 'manual' }}
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Send notifications
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/send-push.mjs --mode=${{ inputs.mode || 'auto' }}
