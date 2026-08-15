@@ -141,7 +141,7 @@ function tabs() {
 }
 function render() {
   const views = { today: todayPage, library: libraryPage, favorites: favoritesPage, info: infoPage };
-  $("#app").innerHTML = `<main class="app"><header class="top"><button class="brand" onclick="go('today')"><img class="brand-mark" src="favicon-32.png" alt=""><span><b>ENGLISH MASTER</b><small>Global Business English, one paw at a time</small></span></button><div class="header-actions"><button id="notification-toggle" class="notification-toggle" type="button" hidden></button><span class="day-pill">DAY ${currentDay()} <i>/ ${maxDay()}</i></span></div></header><div id="notification-help" class="notification-help" role="status" hidden></div>${views[page]()}</main>${tabs()}`;
+  $("#app").innerHTML = `<main class="app"><header class="top"><button class="brand" onclick="go('today')"><img class="brand-mark" src="favicon-32.png" alt=""><span><b>ENGLISH MASTER</b><small>Global Business English, one paw at a time</small></span></button><div class="header-actions"><button id="notification-toggle" class="notification-toggle" type="button">🔔 알림 받기</button><span class="day-pill">DAY ${currentDay()} <i>/ ${maxDay()}</i></span></div></header><div id="notification-help" class="notification-help" role="status" hidden></div>${views[page]()}</main>${tabs()}`;
   save();
   window.EnglishMasterPush?.renderControls();
 }
