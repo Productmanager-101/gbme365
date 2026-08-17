@@ -4,15 +4,6 @@ const day = (day, focus, mission, sentences, words, type = "learn") => ({
   words: words.map(([word, meaning, example], index) => ({ id: `d${day}w${index + 1}`, word, meaning, example }))
 });
 
-const SPEAKING_PROMPTS = [
-  "처음 만난 해외 동료에게 자신의 역할과 팀에 기여하고 싶은 목표를 소개하세요.", "이번 주 가장 중요한 업무와 그 이유를 팀에 설명하세요.", "프로젝트 진행 상황과 금요일까지의 계획을 공유하세요.", "모호한 요청을 받았습니다. 성공 기준과 마감일을 정중히 확인하세요.", "Day 1–4 표현을 활용해 우선순위와 일정 확인을 한 번에 말하세요.",
-  "회의를 시작하며 오늘의 목적과 먼저 다룰 항목을 안내하세요.", "빠른 전면 출시보다 단계적 출시가 낫다는 의견을 근거와 함께 말하세요.", "동료의 우려를 인정하되 데이터에 대한 다른 해석을 제시하세요.", "큰 투자 전에 소규모 고객 테스트를 해 보자고 제안하세요.", "회의에서 상대 의견을 인정하고 위험을 줄일 출시 방식을 제안하세요.",
-  "목요일까지 피드백이 필요한 이유를 포함해 정중히 요청하세요.", "원래 마감일을 지키기 어렵습니다. 품질을 위한 대안을 제안하세요.", "동료에게 고객 분석 담당을 부탁하고 지원이 필요한지 확인하세요.", "발표의 장점을 인정한 뒤 마지막 슬라이드 개선점을 말하세요.", "동료에게 분석 업무와 기한을 맡기고 초안에 피드백을 주세요.",
-  "분기 매출 변화를 보고하되 데이터의 한계도 함께 말하세요.", "유럽 수요 감소가 결과에 영향을 주었을 가능성을 신중히 설명하세요.", "빠른 선택지의 비용과 장기 이점을 비교해야 한다고 말하세요.", "선택한 방안과 예산·담당자에 관한 다음 단계를 발표하세요.", "결과를 평가하고 진행 결정과 다음 조치를 짧게 보고하세요.",
-  "마감일을 지키기 위해 첫 출시 범위를 조정하자고 협상하세요.", "사용자 일부에 영향을 주는 문제와 팀의 대응 계획을 알리세요.", "고객에게 원하는 결과를 묻고 짧은 파일럿을 제안하세요.", "여러 지역 팀이 참여할 회의 시간과 의견 공유 방식을 제안하세요.", "고객 요구를 반영해 필수 기능 중심의 수정 계획을 제시하세요.",
-  "조직 변화의 고객 이점과 전환 중 제공할 지원을 설명하세요.", "신규 시장 진출과 장기적으로 필요한 역량을 연결해 말하세요.", "수요·위험·필요한 승인을 30초 이내로 요약하세요.", "회의 후 수정 계획을 보내며 빠진 내용이 있는지 확인하세요.", "프로젝트 상태, 추천안, 담당자와 일정을 종합해 최종 보고하세요."
-];
-
 const DIALOGUE_CUES = [
   ["Welcome to the team. Could you tell me about your role?", "What do you hope to achieve with us?"], ["What should we concentrate on this week?", "How should we choose between the remaining tasks?"], ["Where are we with the project?", "Are we still on schedule?"], ["The brief may still be too broad. What should we confirm?", "Do you have a question about the timeline as well?"], ["Are our priorities and timeline clear?", "What do we need before we finalize the plan?"],
   ["Shall we get the meeting started?", "What should we cover first?"], ["Would you launch everywhere at once?", "Which option do you support?"], ["Do you agree with my reading of the results?", "What about the market opportunity?"], ["How should we validate this idea?", "Why start small?"], ["I am worried about a full launch.", "What should we agree on before the next phase?"],
@@ -22,10 +13,6 @@ const DIALOGUE_CUES = [
   ["Why are we making this change?", "How will we support the team?"], ["How does this initiative fit our strategy?", "What should we invest in for the future?"], ["What is your executive summary?", "What approval do you need?"], ["Could you send me the latest version?", "How should we confirm the next steps?"], ["Are we ready to move forward?", "What must we finalize first?"]
 ];
 
-function adaptForSpeaking(text) {
-  return text.replace("this week", "this month").replace("Friday", "next Tuesday").replace("Thursday", "Wednesday").replace("two days", "one week").replace("twelve percent", "eight percent").replace("Europe", "Asia").replace("second option", "first option").replace("next month", "next quarter").replace("tomorrow", "on Monday").replace("a small number", "a limited number");
-}
-
 function enrichDay(item) {
   const cues = DIALOGUE_CUES[item.day - 1] || ["What is your view on this?", "What should we do next?"];
   item.dialogue = item.dialogue || [
@@ -34,9 +21,6 @@ function enrichDay(item) {
     { speaker: "Colleague", text: cues[1] },
     { speaker: "You", text: item.sentences[1].text }
   ];
-  const first = adaptForSpeaking(item.sentences[0].text);
-  const second = adaptForSpeaking(item.sentences[1].text);
-  item.speaking = item.speaking || { prompt: SPEAKING_PROMPTS[item.day - 1] || `${item.focus} 상황에서 핵심 의견과 다음 행동을 영어로 말하세요.`, answer: `${first} ${second}` };
   return item;
 }
 

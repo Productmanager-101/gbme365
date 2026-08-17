@@ -37,4 +37,5 @@ jobs:
       - name: Send notifications
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: node scripts/send-push.mjs --mode=${{ inputs.mode || 'auto' }}
+          PUSH_MODE: ${{ github.event_name == 'schedule' && fromJSON('{"0 23 * * *":"morning","0 13 * * *":"evening"}')[github.event.schedule] || inputs.mode }}
+        run: node scripts/send-push.mjs --mode=$PUSH_MODE
